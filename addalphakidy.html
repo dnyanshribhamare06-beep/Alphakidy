@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Alphabet Learning App</title>
+
+<style>
+*{box-sizing:border-box}
+body{margin:0;font-family:cursive;background:#eef3ff;position:relative;z-index:1;}
+.top{display:flex;align-items:center;padding:10px;background:#fff}
+.top button{font-size:20px}
+.top span{margin:auto;font-size:26px;font-weight:bold}
+
+.wrap{display:flex}
+
+.side{
+ width:90px;background:#2c3e50;color:#fff;
+ display:none;flex-direction:column;align-items:center
+}
+.side button{margin:6px;padding:6px;width:70px}
+#jump{display:flex;flex-wrap:wrap;justify-content:center}
+#jump span{background:#7f8c8d;margin:3px;padding:6px;cursor:pointer}
+
+.main{flex:1;text-align:center;padding:10px;position:relative;z-index:2}
+
+.emoji{font-size:90px}
+.word{font-size:34px;margin:6px}
+
+.soundBtn{
+ font-size:28px;
+ padding:6px 14px;
+ margin:6px;
+ background:#ffd54f;
+ border:none;
+ border-radius:8px;
+}
+
+#boxes{display:flex;justify-content:center}
+.box{
+ width:42px;height:42px;border:2px solid #333;
+ margin:5px;font-size:26px;line-height:42px
+}
+
+#keyboard{
+ display:grid;
+ grid-template-columns:repeat(9,1fr);
+ gap:8px;margin-top:12px
+}
+#keyboard button{
+ background:#c8f2b8;border:none;
+ padding:12px;font-size:18px
+}
+
+.tools button{margin:6px;padding:10px 16px;font-size:18px}
+#result{font-size:44px;height:50px}
+
+.nav{display:flex;justify-content:space-between}
+.nav button{
+ background:#4caf50;color:#fff;border:none;
+ padding:12px 20px
+}
+
+/* Bottom Center Watermark */
+#watermark {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 20px; /* reduced size */
+  color: rgba(0,0,0,0.05); /* very faint */
+  font-weight: bold;
+  pointer-events: none; /* allow clicks through */
+  z-index: 0;
+  font-family: cursive;
+  white-space: nowrap;
+  user-select: none;
+}
+</style>
+</head>
+
+<body>
+
+<div class="top">
+  <button onclick="toggleMenu()">☰</button>
+  <span id="title"></span>
+</div>
+
+<div class="wrap">
+
+  <div class="side" id="side">
+    <button onclick="setMode('upper')">A–Z</button>
+    <button onclick="setMode('lower')">a–z</button>
+    <div id="jump"></div>
+  </div>
+
+  <div class="main">
+    <div class="emoji" id="emoji"></div>
+    <div class="word" id="word"></div>
+
+    <!-- 🔊 SOUND BUTTON -->
+    <button class="soundBtn" onclick="playCurrent()">🔊</button>
+
+    <div id="boxes"></div>
+    <div id="keyboard"></div>
+
+    <div class="tools">
+      <button onclick="backspace()">⌫</button>
+      <button onclick="clearAll()">✖</button>
+    </div>
+
+    <div id="result"></div>
+
+    <div class="nav">
+      <button onclick="prev()">← Prev</button>
+      <button onclick="next()">Next →</button>
+    </div>
+  </div>
+</div>
+
+<!-- Bottom Center Watermark -->
+<div id="watermark">D'Shree</div>
+
+<script>
+const data=[
+ {w:'APPLE',e:'🍎'},{w:'BALL',e:'⚽'},{w:'CAT',e:'🐱'},
+ {w:'DOG',e:'🐶'},{w:'ELEPHANT',e:'🐘'},
+ {w:'FISH',e:'🐟'},{w:'GOAT',e:'🐐'},
+ {w:'HEN',e:'🐔'},{w:'ICE',e:'🧊'},
+ {w:'JOKER',e:'🃏'},{w:'KITE',e:'🪁'},
+ {w:'LION',e:'🦁'},{w:'MONKEY',e:'🐒'},
+ {w:'NEST',e:'🪺'},{w:'ORANGE',e:'🍊'},
+ {w:'PARROT',e:'🦜'},{w:'QUEEN',e:'👑'},
+ {w:'RABBIT',e:'🐰'},{w:'SUN',e:'☀️'},
+ {w:'TIGER',e:'🐯'},{w:'UMBRELLA',e:'☂️'},
+ {w:'VAN',e:'🚐'},{w:'WHALE',e:'🐳'},
+ {w:'XYLOPHONE',e:'🎼'},{w:'YAK',e:'🐂'},
+ {w:'ZEBRA',e:'🦓'}
+];
+
+let i=0, typed='', mode='upper';
+
+function load(){
+ typed='';
+ document.getElementById('result').innerText='';
+ const w=data[i].w;
+ const show=mode==='upper'?w:w.toLowerCase();
+
+ document.getElementById('title').innerText=
+   (mode==='upper'?w[0]:w[0].toLowerCase())+' - '+show;
+ document.getElementById('emoji').innerText=data[i].e;
+ document.getElementById('word').innerText=show;
+
+ const b=document.getElementById('boxes');
+ b.innerHTML='';
+ for(let x of show) b.innerHTML+='<div class="box"></div>';
+
+ buildKeyboard();
+}
+
+function press(ch){
+ if(typed.length>=data[i].w.length) return;
+ typed+=ch;
+ document.getElementsByClassName('box')[typed.length-1].innerText=ch;
+ if(typed.length===data[i].w.length) check();
+}
+
+function check(){
+ const correct=mode==='upper'?data[i].w:data[i].w.toLowerCase();
+ if(typed===correct){
+   document.getElementById('result').innerText='👍 😄';
+   speak(data[i].w);
+   setTimeout(next,900);
+ }else{
+   document.getElementById('result').innerText='👎 😢';
+   speak('Try again');
+ }
+}
+
+/* 🔊 PLAY CURRENT WORD ANYTIME */
+function playCurrent(){
+ speak(data[i].w);
+}
+
+function speak(text){
+ if(!('speechSynthesis' in window)) return;
+ const u=new SpeechSynthesisUtterance(text.toLowerCase());
+ u.lang='en-US';
+ u.rate=0.8;
+ u.pitch=1.2; // female feel
+
+ let voices=speechSynthesis.getVoices();
+ let female=voices.find(v=>v.lang.includes('en') && v.name.toLowerCase().includes('female'));
+ if(female) u.voice=female;
+
+ speechSynthesis.cancel();
+ speechSynthesis.speak(u);
+}
+
+function buildKeyboard(){
+ const k=document.getElementById('keyboard');
+ k.innerHTML='';
+ let start=mode==='upper'?65:97;
+ for(let x=0;x<26;x++){
+   let ch=String.fromCharCode(start+x);
+   let b=document.createElement('button');
+   b.innerText=ch;
+   b.onclick=()=>press(ch);
+   k.appendChild(b);
+ }
+}
+
+function buildJump(){
+ const j=document.getElementById('jump');
+ j.innerHTML='';
+ let start=mode==='upper'?65:97;
+ for(let x=0;x<26;x++){
+   let s=document.createElement('span');
+   s.innerText=String.fromCharCode(start+x);
+   s.onclick=()=>{i=x;load()};
+   j.appendChild(s);
+ }
+}
+
+function toggleMenu(){
+ const s=document.getElementById('side');
+ s.style.display=s.style.display==='flex'?'none':'flex';
+}
+function setMode(m){mode=m;buildJump();load()}
+function backspace(){
+ if(!typed) return;
+ typed=typed.slice(0,-1);
+ load();
+ for(let x=0;x<typed.length;x++)
+   document.getElementsByClassName('box')[x].innerText=typed[x];
+}
+function clearAll(){typed='';load()}
+function next(){i=(i+1)%data.length;load()}
+function prev(){i=(i-1+data.length)%data.length;load()}
+
+buildJump();
+load();
+</script>
+
+</body>
+</html>
